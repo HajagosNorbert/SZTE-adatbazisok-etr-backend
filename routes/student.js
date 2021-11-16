@@ -1,24 +1,24 @@
 const { Router } = require('express');
 const db = require('../db');
 const schemaValidation = require('../middlewares/schemaValidation');
-const { newInstructorSchema } = require('../schemas/instructorSchema');
+const { newStudentSchema } = require('../schemas/studentSchema');
 
 const router = Router();
 
-router.post('/', schemaValidation(newInstructorSchema), async (req, res) => {
+router.post('/', schemaValidation(newStudentSchema), async (req, res) => {
   const separate = ({ keresztnev, vezeteknev, ...rest }) => ({
     userFields: { keresztnev, vezeteknev },
-    instructorFields: rest
+    studentFields: rest
   });
 
-  const { userFields, instructorFields } = separate(req.body);
+  const { userFields, studentFields } = separate(req.body);
 
   try {
     const [ret] = await db.query(`INSERT INTO felhasznalo SET ?`, userFields)
     const { insertId } = ret;
-    const instructorFieldsWithId = { oktato_kod: insertId, ...instructorFields }
+    const studentFieldsWithId = { hallgato_kod: insertId, ...studentFields }
 
-    await db.query(`INSERT INTO oktato SET ?`, instructorFieldsWithId)
+    await db.query(`INSERT INTO hallgato SET ?`, studentFieldsWithId)
     return res.json({ insertId })
 
   } catch (e) {
@@ -29,9 +29,19 @@ router.post('/', schemaValidation(newInstructorSchema), async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod`)
-    return res.json(ret)
+    const ret = await db.query(`SELECT * FROM felhasznalo INNER JOIN hallgato on felhasznalo.kod = hallgato.hallgato_kod`)
+    return res.json(ret[0])
 
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+  }
+})
+
+router.get('/newsemester', async (req, res) => {
+  try {
+    const [ret] = await db.query(`UPDATE hallgato SET szemeszterek = szemeszterek + 1 `)
+    return res.sendStatus(200);
   } catch (e) {
     console.error(e);
     return res.status(500).send('Hiba történt az adatbázis műveletkor')
@@ -40,7 +50,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:felhasznalo', async (req, res) => {
   try {
-    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [req.params.felhasznalo])
+    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN hallgato on felhasznalo.kod = hallgato.hallgato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [req.params.felhasznalo])
     if (!ret[0]) {
       return res.sendStatus(404)
     }
@@ -50,6 +60,7 @@ router.get('/:felhasznalo', async (req, res) => {
     return res.status(500).send('Hiba történt az adatbázis műveletkor')
   }
 })
+
 
 
 module.exports = router;

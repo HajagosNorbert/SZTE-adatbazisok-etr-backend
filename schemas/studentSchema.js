@@ -5,3 +5,8 @@ const newStudentSchema = yup.object().shape({
   vezeteknev: yup.string().required(),
   keresztnev: yup.string().required()
 });
+
+
+module.exports = {
+  newStudentSchema
+}

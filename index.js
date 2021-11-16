@@ -1,41 +1,39 @@
 require('dotenv').config();
 const express = require('express')
+const cors = require('cors')
+const db = require('./db')
 
-const usersRoute = require('./routes/user')
+const userRoute = require('./routes/user')
 const instructorRoute = require('./routes/instructor')
+const studentRoute = require('./routes/student')
 
 
 const app = express();
 app.use(express.json());
-app.use('/user', usersRoute)
+app.use(cors({
+  origin: 'http://localhost:3000'
+}))
+app.use('/user', userRoute)
 app.use('/instructor', instructorRoute)
+app.use('/student', studentRoute)
+app.get('/instructorOrStudent', async (req, res) => {
+  try {
+    const [ret] = await db.query(`
+    SELECT *
+    FROM felhasznalo LEFT JOIN hallgato on felhasznalo.kod = hallgato.hallgato_kod 
+    LEFT JOIN oktato on felhasznalo.kod = oktato.oktato_kod
+    WHERE hallgato.hallgato_kod IS NOT NULL OR oktato.oktato_kod IS NOT NULL
+    `)
+    return res.json(ret)
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+  }
+
+})
 
 const port = 3001;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`)
 })
-
-
-
-
-// ============ROUTES===========
-// app.get('/user/', (req, res) => {
-//   res.send("Hi guys!")
-//   db.execute();
-// })
-
-// app.get('/user/:kod', (req, res) => {
-//   const { kod } = req.params;
-//   const { nemletezikugysem } = req.body;
-//   return res.send('Sending user #' + kod)
-// })
-
-// app.post('/instructor/', (req, res) => {
-//   const instructor = req.body.user;
-//   console.log(req.body)
-
-//   return res.send('Successfuly inserted user')
-// })
-
-//======fire it UP! ========================
-
