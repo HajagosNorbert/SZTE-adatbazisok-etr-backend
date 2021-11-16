@@ -1,6 +1,7 @@
 const yup = require('yup')
 
-const newStudentSchema = yup.object().shape({
+const newinstructorOrStudentSchema = yup.object().shape({
+  tanitast_kezdte: yup.date().optional(),
   szemeszterek: yup.number().integer().positive().lessThan(100).optional(),
   vezeteknev: yup.string().required(),
   keresztnev: yup.string().required()
@@ -8,5 +9,5 @@ const newStudentSchema = yup.object().shape({
 
 
 module.exports = {
-  newStudentSchema
+  newinstructorOrStudentSchema
 }
