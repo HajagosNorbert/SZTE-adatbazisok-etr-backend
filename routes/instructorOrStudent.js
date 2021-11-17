@@ -56,4 +56,19 @@ router.post('/', schemaValidation(newinstructorOrStudentSchema), async (req, res
   }
 })
 
+router.delete('/:kod', async (req, res) => {
+
+  const { kod } = req.params;
+
+  try {
+    await db.query(`DELETE FROM oktato WHERE oktato_kod = ?`, [kod]);
+    await db.query(`DELETE FROM hallgato WHERE hallgato_kod = ?`, [kod])
+    await db.query(`DELETE FROM felhasznalo WHERE kod = ?`, [kod])
+    return res.sendStatus(200)
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+  }
+})
 module.exports = router;
