@@ -1,6 +1,9 @@
 const { Router } = require('express');
 const router = Router();
 const db = require('../db');
+const schemaValidation = require('../middlewares/schemaValidation');
+const { updateUserSchema } = require('../schemas/userSchema');
+
 
 router.get('/', async (req, res) => {
   try {
@@ -26,4 +29,20 @@ router.get('/:kod', async (req, res) => {
   }
 })
 
+router.patch('/:kod', schemaValidation(updateUserSchema), async (req, res) => {
+  const { kod } = req.params;
+
+  const userFields = req.body;
+  console.log("Hiiii!, I ran")
+
+  try {
+    const [ret] = await db.query(`UPDATE felhasznalo SET ? WHERE kod = ?`, [userFields, kod])
+    const { insertId } = ret;
+    return res.json({ insertId })
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+  }
+})
 module.exports = router;
