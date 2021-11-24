@@ -31,10 +31,7 @@ router.get('/:kod', async (req, res) => {
 
 router.patch('/:kod', schemaValidation(updateUserSchema), async (req, res) => {
   const { kod } = req.params;
-
   const userFields = req.body;
-  console.log("Hiiii!, I ran")
-
   try {
     const [ret] = await db.query(`UPDATE felhasznalo SET ? WHERE kod = ?`, [userFields, kod])
     const { insertId } = ret;
