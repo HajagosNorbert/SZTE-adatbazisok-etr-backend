@@ -4,7 +4,6 @@ const db = require('../db');
 const schemaValidation = require('../middlewares/schemaValidation');
 const { updateUserSchema } = require('../schemas/userSchema');
 
-
 router.get('/', async (req, res) => {
   try {
     const [users] = await db.query('SELECT * FROM felhasznalo');
