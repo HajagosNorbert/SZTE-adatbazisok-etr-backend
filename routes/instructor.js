@@ -29,7 +29,7 @@ router.post('/', schemaValidation(newInstructorSchema), async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod`)
+    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod ORDER BY vezeteknev, keresztnev`)
     return res.json(ret)
 
   } catch (e) {

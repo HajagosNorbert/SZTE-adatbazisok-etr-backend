@@ -28,6 +28,9 @@ const userRoute = require('./routes/user')
 const instructorRoute = require('./routes/instructor')
 const studentRoute = require('./routes/student')
 const instructorOrStudentRouter = require('./routes/instructorOrStudent');
+const buildingRouter = require('./routes/building');
+const classroomRouter = require('./routes/classroom');
+const courseRouter = require('./routes/course');
 
 
 
@@ -40,6 +43,9 @@ app.use('/user', userRoute)
 app.use('/instructor', instructorRoute)
 app.use('/student', studentRoute)
 app.use('/instructorOrStudent', instructorOrStudentRouter)
+app.use('/building', buildingRouter)
+app.use('/classroom', classroomRouter)
+app.use('/course', courseRouter)
 
 
 const port = 3001;
