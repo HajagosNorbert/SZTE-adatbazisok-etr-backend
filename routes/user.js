@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
     return res.json(users)
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 
@@ -19,12 +19,12 @@ router.get('/:kod', async (req, res) => {
   try {
     const [user] = await db.query(`SELECT * FROM felhasznalo WHERE kod = ${kod}`);
     if (!user[0]) {
-      return res.sendStatus(404)
+      return res.status(404).send({ errors: ['Felhasználó nem található'] })
     }
     return res.json(user)
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 
@@ -38,7 +38,7 @@ router.patch('/:kod', schemaValidation(updateUserSchema), async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 module.exports = router;

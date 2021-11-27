@@ -23,7 +23,7 @@ router.post('/', schemaValidation(newInstructorSchema), async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 
@@ -42,12 +42,12 @@ router.get('/:felhasznalo', async (req, res) => {
   try {
     const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [req.params.felhasznalo])
     if (!ret[0]) {
-      return res.sendStatus(404)
+      return res.status(404).send({ errors: ['Felhasználó nem található'] })
     }
     return res.json(ret)
   } catch (e) {
     console.error(e);
-    return res.status(500).send('Hiba történt az adatbázis műveletkor')
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
 

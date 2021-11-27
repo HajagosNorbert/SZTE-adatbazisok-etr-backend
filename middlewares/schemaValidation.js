@@ -9,7 +9,7 @@ const schemaValidation = (schema) => async (req, res, next) => {
     return next();
   } catch (e) {
     console.error(e);
-    return res.status(400).json({ e });
+    return res.status(400).json(e);
   }
 }
 

@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const db = require('../db');
 const schemaValidation = require('../middlewares/schemaValidation');
-const { newinstructorOrStudentSchema } = require('../schemas/instructorOrStudentSchema');
+const { newCourseSchema } = require('../schemas/courseSchema');
 
 const router = Router();
 
@@ -11,20 +11,6 @@ function determineUserTypeCode(hallgato_kod, oktato_kod) {
   if (hallgato_kod)
     return 1
   return 2
-}
-
-const separate = ({ keresztnev, vezeteknev, ...rest }) => {
-  const studentFields = {}
-  rest.szemeszterek && (studentFields.szemeszterek = rest.szemeszterek)
-
-  const instructorFields = {}
-  rest.tanitast_kezdte && (instructorFields.tanitast_kezdte = rest.tanitast_kezdte)
-
-  return {
-    userFields: { keresztnev, vezeteknev },
-    studentFields,
-    instructorFields
-  }
 }
 
 router.get('/', async (req, res) => {
@@ -43,12 +29,23 @@ router.get('/', async (req, res) => {
   }
 })
 
-router.post('/', schemaValidation(newinstructorOrStudentSchema), async (req, res) => {
+router.post('/', schemaValidation(newCourseSchema), async (req, res) => {
 
-  const { userFields, studentFields, instructorFields } = separate(req.body);
+  const newCourse = req.body;
 
   try {
-    const [ret] = await db.query(`INSERT INTO felhasznalo SET ?`, userFields)
+    const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [newCourse.oktato])
+    if (!ret[0]) {
+      return res.status(404).send({ errors: ['Oktató nem található'] })
+    }
+    return res.json(ret)
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+
+  try {
+    const [ret] = await db.query(`INSERT INTO kurzus SET ?`, newCourse)
     const { insertId } = ret;
     const studentFieldsWithId = { hallgato_kod: insertId, ...studentFields }
     const instructorFieldsWithId = { oktato_kod: insertId, ...instructorFields }
@@ -102,6 +99,7 @@ router.patch('/:kod/usertype/:newtypecode', async (req, res) => {
     return res.sendStatus(200);
 
   } catch (e) {
+    console.error(e);
     return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
@@ -121,4 +119,5 @@ router.delete('/:kod', async (req, res) => {
     return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
+
 module.exports = router;
