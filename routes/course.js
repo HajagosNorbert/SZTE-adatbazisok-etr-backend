@@ -1,27 +1,41 @@
 const { Router } = require('express');
 const db = require('../db');
 const schemaValidation = require('../middlewares/schemaValidation');
-const { newCourseSchema } = require('../schemas/courseSchema');
+const { newCourseSchema, updateCourseSchema } = require('../schemas/courseSchema');
 
 const router = Router();
 
-router.post('/', schemaValidation(newCourseSchema), async (req, res) => {
+async function oktatoNotExists(id) {
+  const [ret] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [id])
+  return ret.length === 0
+}
 
+async function buildingNotExists(id) {
+  const [ret] = await db.query(`SELECT * FROM epulet WHERE epulet.kod = ? LIMIT 1`, [id])
+  return ret.length === 0
+}
+
+async function classroomNotExists(id) {
+  const [ret] = await db.query(`SELECT * FROM terem INNER JOIN epulet on terem.epulet_kod = epulet.kod WHERE terem.kod = ? LIMIT 1`, [id])
+  return ret.length === 0
+}
+
+async function classroomWithBuildingNotExists(classroomId, buildingId) {
+  const [ret] = await db.query(`SELECT * FROM terem INNER JOIN epulet on terem.epulet_kod = epulet.kod WHERE terem.kod = ? AND epulet.kod = ? LIMIT 1`, [classroomId, buildingId])
+  return ret.length === 0
+}
+
+router.post('/', schemaValidation(newCourseSchema), async (req, res) => {
   const newCourse = req.body;
+  console.log(newCourse)
 
   try {
-    const [oktatoRet] = await db.query(`SELECT * FROM felhasznalo INNER JOIN oktato on felhasznalo.kod = oktato.oktato_kod WHERE felhasznalo.kod = ? LIMIT 1`, [newCourse.oktato_kod])
-    if (!oktatoRet[0]) {
+    if (newCourse.oktato_kod && await oktatoNotExists(newCourse.oktato_kod))
       return res.status(404).send({ errors: ['Oktató nem található'] })
-    }
-    const [epuletRet] = await db.query(`SELECT * FROM epulet WHERE epulet.kod = ? LIMIT 1`, [newCourse.epulet_kod])
-    if (!epuletRet[0]) {
+    if (await buildingNotExists(newCourse.epulet_kod))
       return res.status(404).send({ errors: ['Épület nem található'] })
-    }
-    const [teremRet] = await db.query(`SELECT * FROM terem INNER JOIN epulet on terem.epulet_kod = epulet.kod WHERE terem.kod = ? LIMIT 1`, [newCourse.terem_kod])
-    if (!teremRet[0]) {
+    if (await classroomNotExists(newCourse.terem_kod))
       return res.status(404).send({ errors: ['Terem nem található'] })
-    }
 
     const [ret] = await db.query(`INSERT INTO kurzus SET ?`, newCourse)
 
@@ -30,13 +44,42 @@ router.post('/', schemaValidation(newCourseSchema), async (req, res) => {
     console.error(e);
     return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
-
 })
 
+router.patch('/:kod', schemaValidation(updateCourseSchema), async (req, res) => {
+  const { kod } = req.params;
+  const courseFields = req.body;
+
+  if (courseFields.oktato_kod && await oktatoNotExists(courseFields.oktato_kod))
+    return res.status(404).send({ errors: ['Oktató nem található'] })
+  if (courseFields.terem_kod && await classroomNotExists(courseFields.terem_kod))
+    return res.status(404).send({ errors: ['Terem nem található'] })
+  if (courseFields.epulet_kod && await buildingNotExists(courseFields.epulet_kod))
+    return res.status(404).send({ errors: ['Épület nem található'] })
+  if (courseFields.epulet_kod && courseFields.terem_kod && await classroomWithBuildingNotExists(courseFields.terem_kod, courseFields.epulet_kod))
+    return res.status(404).send({ errors: ['Nincs ilyen terem az épületben'] })
+
+
+  try {
+    const [ret] = await db.query(`UPDATE kurzus SET ? WHERE kod = ?`, [courseFields, kod])
+    const { insertId } = ret;
+    return res.json({ insertId })
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+})
 
 router.get('/', async (req, res) => {
   try {
-    const [ret] = await db.query(`SELECT * FROM kurzus`)
+    const [ret] = await db.query(`
+    SELECT kod, nev, max_letszam, oktato_kod, terem_kod, epulet_kod, COUNT(hallgato_kod) as letszam
+    FROM kurzus 
+    LEFT JOIN feliratkozas ON feliratkozas.kurzus_kod = kurzus.kod
+    GROUP BY kurzus.kod
+    `)
+
     return res.json(ret)
 
   } catch (e) {
@@ -46,4 +89,42 @@ router.get('/', async (req, res) => {
 })
 
 
+router.get('/mostexperienced', async (req, res) => {
+  try {
+    const [ret] = await db.query(`
+    SELECT kod, nev, max_letszam, oktato_kod, terem_kod, epulet_kod, COUNT(hallgato_kod) as letszam
+    FROM kurzus 
+    LEFT JOIN feliratkozas ON feliratkozas.kurzus_kod = kurzus.kod
+    WHERE oktato_kod = (
+      SELECT oktato.oktato_kod FROM oktato
+      INNER JOIN kurzus ON kurzus.oktato_kod = oktato.oktato_kod
+      ORDER BY oktato.tanitast_kezdte
+      LIMIT 1
+      )
+    GROUP BY kurzus.kod
+    `)
+    return res.json(ret)
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+})
+
+
+router.delete('/:kod', async (req, res) => {
+
+  const { kod } = req.params;
+
+  try {
+    await db.query(`DELETE FROM kurzus WHERE kod = ?`, [kod]);
+    return res.sendStatus(200)
+  } catch (e) {
+    console.error(e);
+    if (e.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(400).send({ errors: ['Kurzus nem üres! Törléshez távolítsd el a hallgatókat'] })
+    }
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+})
 module.exports = router;

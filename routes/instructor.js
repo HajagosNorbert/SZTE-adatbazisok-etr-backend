@@ -44,7 +44,7 @@ router.get('/:felhasznalo', async (req, res) => {
     if (!ret[0]) {
       return res.status(404).send({ errors: ['Felhasználó nem található'] })
     }
-    return res.json(ret)
+    return res.json(ret[0])
   } catch (e) {
     console.error(e);
     return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
