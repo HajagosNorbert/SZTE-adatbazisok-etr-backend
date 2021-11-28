@@ -3,7 +3,6 @@ const db = require('../db');
 
 const router = Router();
 router.get('/', async (req, res) => {
-  console.log(req.params)
   try {
     const [ret] = await db.query(`SELECT * FROM terem`)
     return res.json(ret)

@@ -16,7 +16,13 @@ const updateCourseSchema = yup.object().shape({
   epulet_kod: yup.string().trim().min(1).uppercase().max(63).optional()
 })
 
+
+const updateCourseStudents = yup.array().of(
+  yup.number().integer().positive()
+).required()
+
 module.exports = {
   newCourseSchema,
-  updateCourseSchema
+  updateCourseSchema,
+  updateCourseStudents
 }

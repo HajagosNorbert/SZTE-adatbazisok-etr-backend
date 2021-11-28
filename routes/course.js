@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const db = require('../db');
 const schemaValidation = require('../middlewares/schemaValidation');
-const { newCourseSchema, updateCourseSchema } = require('../schemas/courseSchema');
+const { newCourseSchema, updateCourseSchema, updateCourseStudents } = require('../schemas/courseSchema');
 
 const router = Router();
 
@@ -27,7 +27,6 @@ async function classroomWithBuildingNotExists(classroomId, buildingId) {
 
 router.post('/', schemaValidation(newCourseSchema), async (req, res) => {
   const newCourse = req.body;
-  console.log(newCourse)
 
   try {
     if (newCourse.oktato_kod && await oktatoNotExists(newCourse.oktato_kod))
@@ -88,6 +87,43 @@ router.get('/', async (req, res) => {
   }
 })
 
+router.get('/:kod/students', async (req, res) => {
+  const { kod } = req.params
+
+  try {
+    const [ret] = await db.query(`
+    SELECT vezeteknev, keresztnev, hallgato_kod
+    FROM kurzus 
+    LEFT JOIN feliratkozas ON feliratkozas.kurzus_kod = kurzus.kod
+    INNER JOIN felhasznalo ON felhasznalo.kod = feliratkozas.hallgato_kod
+    WHERE kurzus.kod =?
+    `, [kod])
+
+    return res.json(ret)
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+})
+
+router.patch('/:kod/students', schemaValidation(updateCourseStudents), async (req, res) => {
+  const { kod } = req.params;
+  const studentsInCourse = req.body;
+  const insertionData = studentsInCourse.map(studId => [kod, studId])
+
+  try {
+    await db.query(`DELETE FROM feliratkozas WHERE feliratkozas.kurzus_kod = ?`, [kod]);
+    const [ret] = await db.query(`
+    INSERT INTO feliratkozas (kurzus_kod, hallgato_kod) VALUES ?`, [insertionData])
+
+    return res.sendStatus(200)
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
+  }
+})
 
 router.get('/mostexperienced', async (req, res) => {
   try {

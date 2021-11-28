@@ -36,9 +36,7 @@ const courseRouter = require('./routes/course');
 
 const app = express();
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:3000'
-}))
+app.use(cors())
 app.use('/user', userRoute)
 app.use('/instructor', instructorRoute)
 app.use('/student', studentRoute)
@@ -48,7 +46,7 @@ app.use('/classroom', classroomRouter)
 app.use('/course', courseRouter)
 
 
-const port = 3001;
+const port = process.argv[2] || 3001;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`)
 })
