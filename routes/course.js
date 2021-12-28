@@ -114,8 +114,9 @@ router.patch('/:kod/students', schemaValidation(updateCourseStudents), async (re
 
   try {
     await db.query(`DELETE FROM feliratkozas WHERE feliratkozas.kurzus_kod = ?`, [kod]);
-    const [ret] = await db.query(`
-    INSERT INTO feliratkozas (kurzus_kod, hallgato_kod) VALUES ?`, [insertionData])
+    if (Array.isArray(insertionData) && insertionData.length !== 0) {
+      const [ret] = await db.query(`INSERT INTO feliratkozas (kurzus_kod, hallgato_kod) VALUES ?`, [insertionData])
+    }
 
     return res.sendStatus(200)
 
@@ -156,10 +157,10 @@ router.delete('/:kod', async (req, res) => {
     await db.query(`DELETE FROM kurzus WHERE kod = ?`, [kod]);
     return res.sendStatus(200)
   } catch (e) {
-    console.error(e);
     if (e.code === 'ER_ROW_IS_REFERENCED_2') {
       return res.status(400).send({ errors: ['Kurzus nem üres! Törléshez távolítsd el a hallgatókat'] })
     }
+    console.error(e);
     return res.status(500).send({ errors: ['Hiba történt az adatbázis műveletkor'] })
   }
 })
